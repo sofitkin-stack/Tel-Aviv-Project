@@ -1,0 +1,38 @@
+# Databricks job: tlv_compensation_daily
+# Runs the pipeline every morning: 01_bronze -> 02_silver -> 03_gold, each task after the previous one succeeded.
+# Compute: serverless (no cluster block), which is what Free Edition offers.
+#
+# How to import (Databricks UI):
+#   Jobs & Pipelines -> Create -> Job -> (top right) "Edit as YAML" / "Switch to code version" -> paste this file -> Save.
+#   Then: Run now (first run), and the schedule takes over from the next morning.
+# Before importing: replace /Workspace/Users/sofitkin@gmail.com/Tel-Aviv-Project below with the Workspace folder that holds the notebooks,
+#   for example /Workspace/Users/<your user>/one-datai/notebooks
+
+resources:
+  jobs:
+    tlv_compensation_daily:
+      name: tlv_compensation_daily
+      description: "Tel Aviv street closures x businesses: Bronze (download if changed) -> Silver (merge) -> Gold (rebuild if Silver changed)."
+      max_concurrent_runs: 1          # a run never overlaps the previous one
+      timeout_seconds: 3600
+      schedule:
+        quartz_cron_expression: "0 0 7 * * ?"   # every day at 07:00
+        timezone_id: "Asia/Jerusalem"
+        pause_status: UNPAUSED
+      tasks:
+        - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/sofitkin@gmail.com/Tel-Aviv-Project/Notebooks/01_bronze.py
+            source: WORKSPACE
+        - task_key: silver
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/sofitkin@gmail.com/Tel-Aviv-Project/Notebooks/02_silver.py
+            source: WORKSPACE
+        - task_key: gold
+          depends_on:
+            - task_key: silver
+          notebook_task:
+            notebook_path: /Workspace/Users/sofitkin@gmail.com/Tel-Aviv-Project/Notebooks/03_gold.py
+            source: WORKSPACE
