@@ -3,8 +3,9 @@
 # MAGIC # 00_setup
 # MAGIC Shared definitions for the whole pipeline. Every other notebook starts with `%run ./00_setup`.
 # MAGIC
-# MAGIC Defines: catalog and schema names, `run_id`, `normalize_street`, `log_check`, and the write helpers
-# MAGIC `append_rows` (Bronze), `latest_per_key`, `upsert_rows`, `last_merge_metrics` (Silver).
+# MAGIC Defines: catalog and schema names, `run_id`, `normalize_street`, the compensation rule (`daily_compensation`),
+# MAGIC `log_check`, and the write helpers `append_rows` (Bronze), `latest_per_key`, `upsert_rows`, `last_merge_metrics` (Silver).
+# MAGIC The functions have no side effects except the writes they name, so `tests/` runs them on a local Spark.
 
 # COMMAND ----------
 
@@ -48,6 +49,17 @@ def normalize_street(col):
     c = F.regexp_replace(c, "\\s+", " ")                 # many spaces -> one space
     c = F.trim(c)
     return c
+
+# COMMAND ----------
+
+# ---- compensation rule (assignment): 100 ILS per area unit per closure day, at most 10,000 ILS per business per day ----
+RATE_PER_AREA = 100
+DAILY_CAP = 10000
+
+
+def daily_compensation(area_col):
+    """Compensation of one business for one closure day: area * RATE_PER_AREA, capped at DAILY_CAP. SQL: LEAST(area * 100, 10000)."""
+    return F.least(area_col * RATE_PER_AREA, F.lit(DAILY_CAP))
 
 # COMMAND ----------
 

@@ -24,6 +24,7 @@
 # MAGIC `00_setup` is loaded first because this notebook uses what it defines:
 # MAGIC - the schema names `SILVER` (what Gold reads) and `GOLD` (what Gold writes),
 # MAGIC - `run_id`, written on `metrics_2023` and on every check row,
+# MAGIC - the compensation rule: `daily_compensation`, `RATE_PER_AREA`, `DAILY_CAP` (section 4),
 # MAGIC - `log_check`, which writes the checks of section 7 to `gold.dq_results`,
 # MAGIC - the imports `F`, `Window`, `datetime`.
 
@@ -35,8 +36,6 @@
 
 YEAR_START = "2023-01-01"
 YEAR_END = "2023-12-31"
-RATE_PER_AREA = 100
-DAILY_CAP = 10000
 
 
 def save_gold(df, name):
@@ -203,7 +202,7 @@ fact = (
     # rule 2: once per business per day (a business has one street, so (business_id, day) is already unique after the join)
     .select("business_id", "street_code", "day", "area", "closures_that_day")
     .withColumn("daily_comp_uncapped", F.col("area") * RATE_PER_AREA)
-    .withColumn("daily_comp", F.least(F.col("daily_comp_uncapped"), F.lit(DAILY_CAP)))                   # SQL: LEAST(area*100, 10000)
+    .withColumn("daily_comp", daily_compensation(F.col("area")))                                           # LEAST(area*100, 10000), defined in 00_setup
     .withColumn("hit_cap", F.col("daily_comp_uncapped") > DAILY_CAP)
 )
 fact_business_day = save_gold(fact, "fact_business_day_2023")
@@ -304,8 +303,9 @@ display(metrics_2023)
 # MAGIC Steps:
 # MAGIC 1. Count violations of each rule directly on the written tables (not on the DataFrames in memory).
 # MAGIC 2. Write one `dq_results` row per check with the value and pass/fail.
-# MAGIC 3. Save the Silver stamp this build used to `gold.build_log` (section 0 reads it on the next run).
-# MAGIC 4. Show the top 10 businesses and streets and this run's Gold checks.
+# MAGIC 3. Stop with an error if any Gold check of this run failed, so the job turns red and `build_log` is not written (the next run rebuilds).
+# MAGIC 4. Save the Silver stamp this build used to `gold.build_log` (section 0 reads it on the next run).
+# MAGIC 5. Show the top 10 businesses and streets and this run's Gold checks.
 
 # COMMAND ----------
 
@@ -324,6 +324,13 @@ log_check("gold_days_outside_2023", outside_2023, outside_2023 == 0, "gold")
 log_check("gold_days_before_founding", before_founding, before_founding == 0, "gold")
 log_check("gold_business_vs_street_totals_diff", sum_business - sum_street, abs(sum_business - sum_street) < 0.01, "gold")
 log_check("gold_businesses_without_street_code", unmatched_businesses, True, "gold")
+
+# data quality gate: a failed check stops the run here (the tables are written, but the build is not recorded)
+failed_checks = (spark.table(f"{GOLD}.dq_results")
+    .filter((F.col("run_id") == run_id) & (F.col("layer") == "gold") & (F.col("passed") == False))
+    .select("check_name", "value").collect())
+if failed_checks:
+    raise ValueError(f"gold checks failed: {[(r['check_name'], r['value']) for r in failed_checks]}")
 
 # remember which Silver state this build reflects
 spark.createDataFrame(

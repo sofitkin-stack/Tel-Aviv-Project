@@ -1,0 +1,5 @@
+# Local tests only; the notebooks themselves run on Databricks serverless and need no install.
+pyspark==3.5.3
+delta-spark==3.2.0
+pytest
+requests
