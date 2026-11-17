@@ -25,7 +25,7 @@ Documentation: [design and assumptions](docs/design.md), [tables](docs/tables.md
 ## How to run
 
 1. Clone this repository into Databricks as a Git folder (Workspace -> Create -> Git folder -> repository URL).
-2. Open `Notebooks/00_setup.py`. The catalog name is `tlv`; if your workspace does not allow creating catalogs, change `CATALOG` to `workspace`. Nothing else is configured.
+2. Open `Notebooks/00_setup.py`. The catalog name is `tlv`; if your workspace does not allow creating catalogs, change `CATALOG` to `workspace` (the default catalog every user can write to) and replace `tlv.` with `workspace.` in `sql/` and in the dashboard JSON. Nothing else is configured.
 3. Run the notebooks in order: `01_bronze`, `02_silver`, `03_gold`, `04_export` (each starts with `%run ./00_setup`). The first run downloads everything (about 2 minutes on serverless) and creates all tables. The export lands in Catalog -> tlv -> gold -> Volumes -> export.
 4. Run `03_gold` again: it prints that Silver has not changed and stops. Run `01_bronze` again: it prints `unchanged, download skipped` per source. Section "What a second run prints" below shows the expected output.
 5. Daily schedule: Jobs & Pipelines -> Create -> Job -> Edit as YAML -> paste `job/tlv_compensation_daily.job.yml`, replace the folder part of the four notebook paths with your Git folder path, Save, Run now.
