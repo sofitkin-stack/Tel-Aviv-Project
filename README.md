@@ -1,7 +1,7 @@
 # Tel Aviv street closures: 2023 business compensation pipeline
 
 A PySpark / Delta pipeline on Databricks (Free Edition, serverless) that computes how much the municipality owes businesses for street closures in 2023.
-It reads three public sources: the street-closures CSV and two layers of the city's ArcGIS API (businesses, addresses).
+It reads three public sources: the street-closures CSV and two layers of the Tel Aviv-Yafo municipality's ArcGIS API (businesses, addresses).
 Medallion layout: Bronze (raw snapshots), Silver (clean, merged by key), Gold (compensation).
 
 ```mermaid
@@ -14,34 +14,13 @@ flowchart LR
 
 | layer | tables | runs when |
 |---|---|---|
-| Sources | closures CSV, businesses layer 925, addresses layer 527 | published by the city |
+| Sources | closures CSV, businesses layer 925, addresses layer 527 | published by the Tel Aviv-Yafo municipality |
 | Bronze | `closures`, `businesses_raw`, `addresses_raw`, `source_versions` | a source's version stamp changed |
 | Silver | `closures`, `businesses`, `addresses`, `business_street` | Bronze has rows after the watermark |
 | Gold | `fact_business_day_2023`, `comp_by_business_2023`, `comp_by_street_2023`, `metrics_2023`, `build_log` | Silver changed since the last build |
 | Checks | `dq_results`, written by every layer on every run | always |
 
 Documentation: [design and assumptions](docs/design.md), [tables](docs/tables.md), [results and insights](docs/results.md).
-
-## Repository layout
-
-| path | what it is |
-|---|---|
-| `Notebooks/00_setup.py` | shared names, `run_id`, and the helpers used by every layer (`normalize_street`, `daily_compensation`, `append_rows`, `latest_per_key`, `upsert_rows`, `log_check`) |
-| `Notebooks/01_bronze.py` | downloads the three sources when their version stamp changed and appends them as raw snapshots |
-| `Notebooks/02_silver.py` | reads new Bronze rows, cleans and types them, merges by key, builds the business-to-street lookup |
-| `Notebooks/03_gold.py` | rebuilds the compensation tables when Silver changed; fails the run if a check fails |
-| `Notebooks/04_export.py` | writes the cleaned Silver tables and the Gold outputs as CSV files to the volume `tlv.gold.export` |
-| `tests/` | pytest unit tests of the `00_setup` helpers (street key, compensation rule, latest-per-key, MERGE) on a local Spark |
-| `requirements-dev.txt` | what the tests need locally (`pip install -r requirements-dev.txt`, then `pytest`) |
-| `sql/data_checks.sql` | eight independent SQL checks on the result (totals, duplicates, outliers) |
-| `sql/street_match_comparison.sql` | validation of the street matching: by name vs. by nearest address |
-| `dashboard/tlv_compensation_2023.lvdash.json` | Databricks dashboard (import it: Dashboards -> Create -> Import from file) |
-| `dashboard/dashboard_queries.sql` | the dashboard's datasets as plain SQL |
-| `job/tlv_compensation_daily.job.yml` | the daily job, Bronze -> Silver -> Gold -> Export, 07:00 Asia/Jerusalem (Jobs -> Create -> Edit as YAML) |
-| `docs/assignment.txt` | the assignment text |
-| `docs/design.md` | assumptions, design decisions, known limitations, next steps |
-| `docs/tables.md` | every table in Bronze, Silver and Gold: grain, key, main columns |
-| `docs/results.md` | 2023 results, top streets, insights |
 
 ## How to run
 
@@ -65,3 +44,24 @@ Nothing changed at the sources, so nothing is downloaded, merged or rebuilt; eac
             businesses: processed 0 bronze rows -> silver +0 ~0, rejected 0, dedup in batch 0, no id 0
 03_gold     gold not rebuilt: Silver has not changed since the last build
 ```
+
+## Repository layout
+
+| path | what it is |
+|---|---|
+| `Notebooks/00_setup.py` | shared names, `run_id`, and the helpers used by every layer (`normalize_street`, `daily_compensation`, `append_rows`, `latest_per_key`, `upsert_rows`, `log_check`) |
+| `Notebooks/01_bronze.py` | downloads the three sources when their version stamp changed and appends them as raw snapshots |
+| `Notebooks/02_silver.py` | reads new Bronze rows, cleans and types them, merges by key, builds the business-to-street lookup |
+| `Notebooks/03_gold.py` | rebuilds the compensation tables when Silver changed; fails the run if a check fails |
+| `Notebooks/04_export.py` | writes the cleaned Silver tables and the Gold outputs as CSV files to the volume `tlv.gold.export` |
+| `tests/` | pytest unit tests of the `00_setup` helpers (street key, compensation rule, latest-per-key, MERGE) on a local Spark |
+| `requirements-dev.txt` | what the tests need locally (`pip install -r requirements-dev.txt`, then `pytest`) |
+| `sql/data_checks.sql` | eight independent SQL checks on the result (totals, duplicates, outliers) |
+| `sql/street_match_comparison.sql` | validation of the street matching: by name vs. by nearest address |
+| `dashboard/tlv_compensation_2023.lvdash.json` | Databricks dashboard (import it: Dashboards -> Create -> Import from file) |
+| `dashboard/dashboard_queries.sql` | the dashboard's datasets as plain SQL |
+| `job/tlv_compensation_daily.job.yml` | the daily job, Bronze -> Silver -> Gold -> Export, 07:00 Asia/Jerusalem (Jobs -> Create -> Edit as YAML) |
+| `docs/assignment.txt` | the assignment text |
+| `docs/design.md` | assumptions, design decisions, known limitations, next steps |
+| `docs/tables.md` | every table in Bronze, Silver and Gold: grain, key, main columns |
+| `docs/results.md` | 2023 results, top streets, insights |
