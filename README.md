@@ -4,19 +4,20 @@ A PySpark / Delta pipeline on Databricks (Free Edition, serverless) that compute
 from two public sources: the street-closures CSV and the city's businesses layer (ArcGIS API). Medallion layout: Bronze (raw snapshots), Silver (clean, merged by key), Gold (compensation).
 
 ```mermaid
-flowchart TD
-    SRC["Sources: closures CSV, businesses layer 925, addresses layer 527"]
-    SRC -->|"download only when the source's version stamp changed"| BRONZE
-    BRONZE["Bronze (append-only raw snapshots)<br/>closures, businesses_raw, addresses_raw, source_versions"]
-    BRONZE -->|"new rows after the watermark, MERGE by key"| SILVER
-    SILVER["Silver (one clean row per key, reject_reason)<br/>closures, businesses, addresses, business_street"]
-    SILVER -->|"full rebuild, only when Silver changed"| GOLD
-    GOLD["Gold (2023 compensation)<br/>fact_business_day_2023 -> comp_by_business_2023, comp_by_street_2023, metrics_2023"]
-    GOLD --> OUT["CSV export to a volume, dashboard"]
-    BRONZE -.->|checks| DQ[("gold.dq_results")]
-    SILVER -.-> DQ
-    GOLD -.-> DQ
+flowchart LR
+    A["Sources"] -->|"if the version<br/>stamp changed"| B["Bronze<br/>raw snapshots"]
+    B -->|"new rows,<br/>MERGE by key"| C["Silver<br/>clean, one row per key"]
+    C -->|"if Silver<br/>changed"| D["Gold<br/>2023 compensation"]
+    D --> E["CSV export<br/>dashboard"]
 ```
+
+| layer | tables | runs when |
+|---|---|---|
+| Sources | closures CSV, businesses layer 925, addresses layer 527 | published by the city |
+| Bronze | `closures`, `businesses_raw`, `addresses_raw`, `source_versions` | a source's version stamp changed |
+| Silver | `closures`, `businesses`, `addresses`, `business_street` | Bronze has rows after the watermark |
+| Gold | `fact_business_day_2023`, `comp_by_business_2023`, `comp_by_street_2023`, `metrics_2023`, `build_log` | Silver changed since the last build |
+| Checks | `dq_results`, written by every layer on every run | always |
 
 ## Repository layout
 
