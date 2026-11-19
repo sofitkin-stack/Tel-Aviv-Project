@@ -91,4 +91,4 @@ Nothing changed at the sources, so nothing is downloaded, merged or rebuilt; eac
 | `docs/design.md` | assumptions, design decisions, known limitations, next steps |
 | `docs/tables.md` | every table in Bronze, Silver and Gold: grain, key, main columns |
 | `docs/results.md` | 2023 results, top streets, insights |
-| `output/` | the data outputs as CSV: cleaned closures and businesses (Silver), totals per business and per street, metrics (Gold), from the run of 19.11.2026 |
+| `output/` | the data outputs as CSV from the run of 19.11.2026, with [output/README.md](output/README.md) describing each file: role, grain, rows, use |
