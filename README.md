@@ -33,7 +33,7 @@ Documentation:
 3. Run the notebooks in order: `01_bronze`, `02_silver`, `03_gold`, `04_export` (each starts with `%run ./00_setup`). The first run downloads everything (about 2 minutes on serverless) and creates all tables. The export lands in Catalog -> tlv -> gold -> Volumes -> export.
 4. Run `03_gold` again: it prints that Silver has not changed and stops. Run `01_bronze` again: it prints `unchanged, download skipped` per source. Section "What a second run prints" below shows the expected output.
 5. Daily schedule: Jobs & Pipelines -> Create -> Job -> Edit as YAML -> paste `job/tlv_compensation_daily.job.yml`, replace the folder part of the four notebook paths with your Git folder path, Save, Run now.
-6. Dashboard: Dashboards -> Create -> Import from file -> `dashboard/tlv_compensation_2023.lvdash.json`. It reads `tlv.gold.*`.
+6. Dashboard: Dashboards -> Create -> Import from file -> `dashboard/tlv_compensation_2023.lvdash.json`. It reads `tlv.gold.*`. What it looks like: [dashboard/dashboard.png](dashboard/dashboard.png).
 7. Checks: run `sql/data_checks.sql` in the SQL editor; every query states the expected result in its comment. Every run also writes its own checks to `tlv.gold.dq_results`, and `03_gold` stops with an error if one of its checks fails.
 8. Unit tests (local machine, Python 3.10+ and Java 17): `pip install -r requirements-dev.txt` then `pytest`. The tests load the helpers from `Notebooks/00_setup.py` and run them on a local Spark with Delta.
 
@@ -64,6 +64,7 @@ Nothing changed at the sources, so nothing is downloaded, merged or rebuilt; eac
 | `sql/street_match_comparison.sql` | validation of the street matching: by name vs. by nearest address |
 | `dashboard/tlv_compensation_2023.lvdash.json` | Databricks dashboard (import it: Dashboards -> Create -> Import from file) |
 | `dashboard/dashboard_queries.sql` | the dashboard's datasets as plain SQL |
+| `dashboard/dashboard.png` | screenshot of the dashboard |
 | `job/tlv_compensation_daily.job.yml` | the daily job, Bronze -> Silver -> Gold -> Export, 07:00 Asia/Jerusalem (Jobs -> Create -> Edit as YAML) |
 | `docs/assignment.txt` | the assignment text |
 | `docs/design.md` | assumptions, design decisions, known limitations, next steps |
