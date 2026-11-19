@@ -27,7 +27,7 @@ Filled in from the final run (see [docs/results.md](docs/results.md)).
 ## If you have five minutes
 
 1. [dashboard/dashboard.png](dashboard/dashboard.png): the headline numbers, top streets, closures per day.
-2. `gold.metrics_2023` (or [docs/results.md](docs/results.md)): the two totals side by side, model A (the literal rule) and model B (permanent pedestrian streets excluded, used for the outputs), with cost per area unit and the share of days at the cap.
+2. `gold.metrics_2023` (or [docs/results.md](docs/results.md)): total compensation, cost per area unit, share of days at the cap, and how many pedestrian-street events were excluded.
 3. [docs/design.md](docs/design.md), assumption 10: why the pedestrian streets are excluded, and assumption 2: how a business gets its street code.
 4. `Notebooks/03_gold.py`, sections 4 to 7: the fact table, the two outputs, the metrics and the checks that stop the run.
 5. `tests/test_setup_helpers.py`: the five unit tests of the shared rules.

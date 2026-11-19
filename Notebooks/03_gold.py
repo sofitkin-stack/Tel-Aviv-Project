@@ -13,7 +13,6 @@
 # MAGIC 2. One compensation per business per day, whatever the number of closures that day.
 # MAGIC 3. 100 ILS per unit of area (`shetach`) per day, capped at 10,000 ILS per business per day.
 # MAGIC 4. Days in 2023 only. A business founded after 2023 gets nothing; one founded during 2023 is eligible from its founding date.
-# MAGIC 5. Permanent pedestrian streets are not compensated (model B, the one used for the outputs). The literal rule with them included (model A) is computed as well and reported in `metrics_2023`, so the two totals sit side by side.
 # MAGIC
 # MAGIC ## Writes
 # MAGIC `gold.closure_days_2023`, `gold.dim_business`, `gold.fact_business_day_2023`, `gold.comp_by_business_2023`, `gold.comp_by_street_2023`, `gold.metrics_2023`, `gold.build_log`; checks go to `gold.dq_results`.
@@ -113,38 +112,35 @@ street_names = (
 
 # MAGIC %md
 # MAGIC ## 2. Closure days: one row per (street, day) closed in 2023
-# MAGIC Goal: expand every valid closure into its calendar days, clipped to 2023, one row per street per day (a street closed twice on a day appears once).
+# MAGIC Goal: expand every valid, non-pedestrian closure into its calendar days, clipped to 2023, one row per street per day (a street closed twice on a day appears once).
 # MAGIC
 # MAGIC Steps:
-# MAGIC 1. Read `silver.closures` with `reject_reason IS NULL`.
-# MAGIC 2. `closure_days_of(df)`: clip each closure to 2023 (`from_day = max(start_date, 2023-01-01)`, `to_day = min(end_date, 2023-12-31)`), expand to one row per day with `explode(sequence(from_day, to_day))`, group by (street_code, day) counting distinct events.
-# MAGIC 3. Write `gold.closure_days_2023` from the non-pedestrian closures (model B, used by everything below).
-# MAGIC 4. Keep `closure_days_literal` from all closures, pedestrian streets included (model A); section 6 uses it only to compute the literal-rule total.
+# MAGIC 1. Read `silver.closures` with `reject_reason IS NULL`; drop rows flagged `is_pedestrian_street` (their event count is kept for the metrics).
+# MAGIC 2. Clip each closure to 2023: `from_day = max(start_date, 2023-01-01)`, `to_day = min(end_date, 2023-12-31)`; a closure entirely outside 2023 disappears here.
+# MAGIC 3. Expand to one row per day with `explode(sequence(from_day, to_day))`.
+# MAGIC 4. Group by (street_code, day), counting distinct events, so a street closed twice on a day is one row.
+# MAGIC 5. Write `gold.closure_days_2023`.
 
 # COMMAND ----------
 
 closures_all = spark.table(f"{SILVER}.closures").filter("reject_reason IS NULL").select("id_rechov", "side", "street_code", "start_date", "end_date", "is_pedestrian_street")
+# permanent pedestrian streets are not compensated
+closures = closures_all.filter(~F.col("is_pedestrian_street")).drop("is_pedestrian_street")
 pedestrian_events_excluded = closures_all.filter("is_pedestrian_street").select("id_rechov").distinct().count()
 
-
-def closure_days_of(closures_df):
-    """One row per (street_code, day) closed in 2023, with the number of distinct closure events that day."""
-    return (
-        closures_df
-        # cut each closure to the 2023 window before expanding it to days
-        .withColumn("from_day", F.greatest(F.col("start_date"), F.lit(YEAR_START).cast("date")))
-        .withColumn("to_day", F.least(F.col("end_date"), F.lit(YEAR_END).cast("date")))
-        .filter(F.col("from_day") <= F.col("to_day"))
-        .withColumn("day", F.explode(F.sequence(F.col("from_day"), F.col("to_day"))))   # SQL: explode(sequence(from_day, to_day))
-        .groupBy("street_code", "day")
-        .agg(F.countDistinct("id_rechov").alias("closures_that_day"))
-    )
-
-
-# model B (used for all outputs): permanent pedestrian streets are not compensated
-closure_days_2023 = save_gold(closure_days_of(closures_all.filter(~F.col("is_pedestrian_street"))), "closure_days_2023")
-# model A (comparison only): the literal rule, every closure counts
-closure_days_literal = closure_days_of(closures_all)
+closure_days = (
+    closures
+    # cut each closure to the 2023 window before expanding it to days
+    .withColumn("from_day", F.greatest(F.col("start_date"), F.lit(YEAR_START).cast("date")))
+    .withColumn("to_day", F.least(F.col("end_date"), F.lit(YEAR_END).cast("date")))
+    .filter(F.col("from_day") <= F.col("to_day"))
+    .withColumn("day", F.explode(F.sequence(F.col("from_day"), F.col("to_day"))))   # SQL: explode(sequence(from_day, to_day))
+    .select("street_code", "day", "id_rechov")
+)
+closure_days_2023 = save_gold(
+    closure_days.groupBy("street_code", "day").agg(F.countDistinct("id_rechov").alias("closures_that_day")),
+    "closure_days_2023",
+)
 
 # COMMAND ----------
 
@@ -264,8 +260,7 @@ comp_by_street = save_gold(
 # MAGIC Steps:
 # MAGIC 1. Aggregate the fact once: total, uncapped total, distinct businesses, business-days, days at cap.
 # MAGIC 2. Add the counts that do not come from the fact: total area of compensated businesses, streets closed in 2023, businesses without a street code, pedestrian events excluded.
-# MAGIC 3. Model A total: join the eligible businesses to `closure_days_literal` (pedestrian streets included) with the same founding-date rule and the same daily formula, and sum it. The difference from the model B total is what the pedestrian streets would cost.
-# MAGIC 4. Build one row per metric (name, value, description) and write `gold.metrics_2023` with the `run_id`.
+# MAGIC 3. Build one row per metric (name, value, description) and write `gold.metrics_2023` with the `run_id`.
 
 # COMMAND ----------
 
@@ -280,13 +275,6 @@ area_total = comp_by_business.agg(F.sum("area")).collect()[0][0]
 streets_closed = closure_days_2023.select("street_code").distinct().count()
 unmatched_businesses = dim_business.filter(F.col("street_code").isNull()).count()
 
-# model A: the literal rule, pedestrian streets included (same businesses, same founding-date rule, same daily formula)
-total_comp_literal = (
-    eligible_businesses.join(closure_days_literal, "street_code")
-    .filter(F.col("founded_date").isNull() | (F.col("day") >= F.col("founded_date")))
-    .agg(F.sum(daily_compensation(F.col("area")))).collect()[0][0]
-)
-
 metrics_rows = [
     ("total_compensation_ils", float(totals["total_comp"]), "Sum of all daily compensations in 2023"),
     ("compensated_businesses", float(totals["businesses"]), "Businesses with at least one compensated day"),
@@ -297,9 +285,7 @@ metrics_rows = [
     ("cap_savings_ils", float(totals["total_comp_uncapped"] - totals["total_comp"]), "What the cap saved versus paying area*100 with no cap"),
     ("streets_with_closures_2023", float(streets_closed), "Distinct street codes closed on at least one day in 2023"),
     ("businesses_without_street_code", float(unmatched_businesses), "Businesses that could not be matched to a street, so could not be compensated"),
-    ("pedestrian_street_events_excluded", float(pedestrian_events_excluded), "Closure events marked as a permanent pedestrian street, excluded from compensation (model B)"),
-    ("total_compensation_literal_rule_ils", float(total_comp_literal), "Model A: the same rule with pedestrian streets included, for comparison"),
-    ("pedestrian_street_compensation_ils", float(total_comp_literal - totals["total_comp"]), "Model A minus model B: what the permanent pedestrian streets would cost"),
+    ("pedestrian_street_events_excluded", float(pedestrian_events_excluded), "Closure events marked as a permanent pedestrian street, excluded from compensation"),
 ]
 metrics_2023 = save_gold(
     spark.createDataFrame(metrics_rows, "metric string, value double, description string")
