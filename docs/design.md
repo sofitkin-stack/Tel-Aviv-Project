@@ -45,7 +45,7 @@ Back to the [README](../README.md).
 
 1. Bronze downloads a changed source in full (about 37K businesses, 52K addresses); the sources offer no way to fetch only changed records.
 2. The 334 closure sides without a street code (assumption 7) are not compensated; some name a street in free text that is not parsed.
-3. Businesses whose street name is unknown to the city address layer and whose point sits on no address (26 in the 16.11 run) receive no compensation and are only counted.
+3. Businesses whose street name is unknown to the city address layer and whose point sits on no address (47 in the 19.11 run) receive no compensation and are only counted.
 4. Each notebook run has its own `run_id`, so in a job the four tasks write four ids per day to `dq_results`.
 5. Street-closure rows name two streets; streets between them are not identified (assumption 3).
 

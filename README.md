@@ -22,7 +22,16 @@ flowchart LR
 
 ## Key results
 
-Filled in from the final run (see [docs/results.md](docs/results.md)).
+Run of 19.11.2026 (details and insights in [docs/results.md](docs/results.md), the data in [output/](output/)):
+
+| metric | value |
+|---|---|
+| total compensation 2023 | 4,029,364,200 ILS |
+| compensated businesses | 7,484 |
+| compensated business-days | 654,671 |
+| cost per area unit | 784.38 ILS |
+| share of business-days at the 10,000 cap | 34.7% |
+| largest street | Ibn Gvirol, 1,210,915,500 ILS (30.1%) |
 
 ## If you have five minutes
 
@@ -82,3 +91,4 @@ Nothing changed at the sources, so nothing is downloaded, merged or rebuilt; eac
 | `docs/design.md` | assumptions, design decisions, known limitations, next steps |
 | `docs/tables.md` | every table in Bronze, Silver and Gold: grain, key, main columns |
 | `docs/results.md` | 2023 results, top streets, insights |
+| `output/` | the data outputs as CSV: cleaned closures and businesses (Silver), totals per business and per street, metrics (Gold), from the run of 19.11.2026 |
