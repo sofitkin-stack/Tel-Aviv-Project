@@ -20,7 +20,11 @@ flowchart LR
 | Gold | `fact_business_day_2023`, `comp_by_business_2023`, `comp_by_street_2023`, `metrics_2023`, `build_log` | Silver changed since the last build |
 | Checks | `dq_results`, written by every layer on every run | always |
 
-Documentation: [design and assumptions](docs/design.md), [tables](docs/tables.md), [results and insights](docs/results.md).
+Documentation:
+
+- [Design and assumptions](docs/design.md)
+- [Tables](docs/tables.md)
+- [Results and insights](docs/results.md)
 
 ## How to run
 
