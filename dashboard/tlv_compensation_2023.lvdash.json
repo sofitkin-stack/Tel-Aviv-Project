@@ -3,47 +3,65 @@
     {
       "name": "kpis",
       "displayName": "kpis",
-      "query": "SELECT metric, value FROM tlv.gold.metrics_2023"
+      "queryLines": [
+        "SELECT metric, value FROM tlv.gold.metrics_2023"
+      ]
     },
     {
       "name": "top_streets",
       "displayName": "top_streets",
-      "query": "SELECT street_name, total_comp_ils FROM tlv.gold.comp_by_street_2023 ORDER BY total_comp_ils DESC LIMIT 10"
+      "queryLines": [
+        "SELECT street_name, total_comp_ils FROM tlv.gold.comp_by_street_2023 ORDER BY total_comp_ils DESC LIMIT 10"
+      ]
     },
     {
       "name": "top_businesses",
       "displayName": "top_businesses",
-      "query": "SELECT business_id, business_type, street_name, house_number, area, compensated_days, total_comp_ils FROM tlv.gold.comp_by_business_2023 ORDER BY total_comp_ils DESC LIMIT 10"
+      "queryLines": [
+        "SELECT business_id, business_type, street_name, house_number, area, compensated_days, total_comp_ils FROM tlv.gold.comp_by_business_2023 ORDER BY total_comp_ils DESC LIMIT 10"
+      ]
     },
     {
       "name": "monthly",
       "displayName": "monthly",
-      "query": "SELECT date_trunc('month', day) AS month, SUM(daily_comp) AS total_comp_ils FROM tlv.gold.fact_business_day_2023 GROUP BY 1 ORDER BY 1"
+      "queryLines": [
+        "SELECT date_trunc('month', day) AS month, SUM(daily_comp) AS total_comp_ils FROM tlv.gold.fact_business_day_2023 GROUP BY 1 ORDER BY 1"
+      ]
     },
     {
       "name": "closures_daily",
       "displayName": "closures_daily",
-      "query": "SELECT day, COUNT(DISTINCT street_code) AS streets_closed FROM tlv.gold.closure_days_2023 GROUP BY day ORDER BY day"
+      "queryLines": [
+        "SELECT day, COUNT(DISTINCT street_code) AS streets_closed FROM tlv.gold.closure_days_2023 GROUP BY day ORDER BY day"
+      ]
     },
     {
       "name": "kpi_total_compensation_ils",
       "displayName": "kpi_total_compensation_ils",
-      "query": "SELECT value FROM tlv.gold.metrics_2023 WHERE metric = 'total_compensation_ils'"
+      "queryLines": [
+        "SELECT value FROM tlv.gold.metrics_2023 WHERE metric = 'total_compensation_ils'"
+      ]
     },
     {
       "name": "kpi_compensated_businesses",
       "displayName": "kpi_compensated_businesses",
-      "query": "SELECT value FROM tlv.gold.metrics_2023 WHERE metric = 'compensated_businesses'"
+      "queryLines": [
+        "SELECT value FROM tlv.gold.metrics_2023 WHERE metric = 'compensated_businesses'"
+      ]
     },
     {
       "name": "kpi_share_of_days_at_cap",
       "displayName": "kpi_share_of_days_at_cap",
-      "query": "SELECT value FROM tlv.gold.metrics_2023 WHERE metric = 'share_of_days_at_cap'"
+      "queryLines": [
+        "SELECT value FROM tlv.gold.metrics_2023 WHERE metric = 'share_of_days_at_cap'"
+      ]
     },
     {
       "name": "all_businesses",
       "displayName": "all_businesses",
-      "query": "SELECT business_id, owner_name, business_type, street_name, house_number, area, compensated_days, total_comp_ils FROM tlv.gold.comp_by_business_2023 ORDER BY total_comp_ils DESC"
+      "queryLines": [
+        "SELECT business_id, owner_name, business_type, street_name, house_number, area, compensated_days, total_comp_ils FROM tlv.gold.comp_by_business_2023 ORDER BY total_comp_ils DESC"
+      ]
     }
   ],
   "pages": [
@@ -980,7 +998,14 @@
             "height": 1
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
-  ]
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
 }
