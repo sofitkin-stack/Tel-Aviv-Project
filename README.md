@@ -1,8 +1,8 @@
 # Tel Aviv street closures: 2023 business compensation pipeline
 
-An incremental PySpark and Delta Lake pipeline on Databricks (Free Edition, serverless) that calculates the compensation the Tel Aviv-Yafo municipality owes businesses for street closures in 2023.
+This repository holds an incremental PySpark and Delta Lake pipeline on Databricks (Free Edition, serverless) that calculates the compensation the Tel Aviv-Yafo municipality owes businesses for street closures in 2023.
 Sources: the street-closures CSV and the businesses and addresses layers of the municipality's ArcGIS API.
-Medallion architecture: Bronze keeps raw snapshots, Silver holds clean records merged by key, Gold holds the compensation tables behind the dashboard.
+Medallion architecture: Bronze keeps raw snapshots, Silver holds clean records merged by key, and Gold holds the compensation tables behind the dashboard.
 
 ```mermaid
 flowchart LR
